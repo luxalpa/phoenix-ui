@@ -15,7 +15,7 @@ export type PhxNode = VNode | TextNode | Subject<any>;
 
 export type ComponentFn = (props?: any) => PhxNode;
 
-function phxCreateElement(
+export function phxCreateElement(
   tag: string,
   params: Record<string, any>,
   ...children: VNode[]
@@ -29,34 +29,37 @@ function phxCreateElement(
 
 function AppComponent(): VNode {
   const num$ = new BehaviorSubject(0);
-  const entries$ = new BehaviorSubject<string[]>([]);
+  const someVal$ = new BehaviorSubject("Hello");
+  const entries$ = new BehaviorSubject<Subject<string>[]>([]);
 
   function add() {
     num$.next(num$.value + 1);
-    entries$.value.push("Element");
+    entries$.value.push(new BehaviorSubject<string>("Element"));
     entries$.next(entries$.value);
     console.log("Adding");
+  }
+
+  function change(d: Subject<string>) {
+    d.next("Changed");
   }
 
   return (
     <div>
       <button onclick={add}>Add entry</button>
+      <OtherComponent stuff={someVal$} />
       <div>Number of entries: {num$}</div>
       {entries$.pipe(
         rxjs.map(value =>
           value.map((d, i) => (
             <div>
               {d} ({i + 1}/{num$})
+              <button onclick={() => change(d)}>Change</button>
             </div>
           ))
         )
       )}
     </div>
   );
-}
-
-function Hello() {
-  return <OtherComponent stuff="hello" />;
 }
 
 function bootstrap() {
@@ -98,8 +101,8 @@ function buildNode(n: PhxNode): ChildNode | DocumentFragment {
   }
 
   if (typeof n.tag !== "string") {
-    console.log("Error", n);
-    throw new Error("Custom Components not yet implemented");
+    const subtree = n.tag(n.params);
+    return buildNode(subtree)
   }
   const el = document.createElement(n.tag);
   for (let child of n.children) {
