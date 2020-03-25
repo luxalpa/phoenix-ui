@@ -102,7 +102,7 @@ function buildNode(n: PhxNode): ChildNode | DocumentFragment {
 
   if (typeof n.tag !== "string") {
     const subtree = n.tag(n.params);
-    return buildNode(subtree)
+    return buildNode(subtree);
   }
   const el = document.createElement(n.tag);
   for (let child of n.children) {
