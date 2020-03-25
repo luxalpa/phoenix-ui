@@ -1,51 +1,20 @@
-type SubscriptionFn<T> = (v: T) => void;
+import { BehaviorSubject, Subject } from "rxjs";
+
 type DestructionFn = () => void;
 
-class Reactive<T> {
-  value: T;
-  private readonly subscribers: SubscriptionFn<T>[];
-
-  constructor(value: T) {
-    this.value = value;
-    this.subscribers = [];
-  }
-
-  set(v: T): void {
-    this.value = v;
-    for (const sub of this.subscribers) {
-      sub(v);
-    }
-  }
-
-  subscribe(fn: SubscriptionFn<T>): DestructionFn {
-    this.subscribers.push(fn);
-    fn(this.value);
-    return () => {
-      this.subscribers.splice(
-        this.subscribers.findIndex(v => v === fn),
-        1
-      );
-    };
-  }
-}
-
-function reactive<T>(value: T): Reactive<T> {
-  return new Reactive<T>(value);
-}
-
 function AppComponent() {
-  let numClicked$ = reactive(0);
+  let numClicked$ = new BehaviorSubject(0);
 
   const addButton = document.createElement("button");
   addButton.addEventListener("click", () => {
-    numClicked$.set(numClicked$.value + 1);
+    numClicked$.next(numClicked$.value + 1);
   });
   addButton.appendChild(document.createTextNode("Add"));
 
   const removeButton = document.createElement("button");
   removeButton.addEventListener("click", () => {
     if (numClicked$.value > 0) {
-      numClicked$.set(numClicked$.value - 1);
+      numClicked$.next(numClicked$.value - 1);
     }
   });
   removeButton.appendChild(document.createTextNode("Remove"));
@@ -72,7 +41,7 @@ function AppComponent() {
 
 function ToDoEntryComponent(
   parent: Node,
-  prop$: Reactive<number>
+  prop$: Subject<number>
 ): DestructionFn {
   const div = document.createElement("div");
   const text = document.createTextNode("Entry X");
@@ -80,18 +49,13 @@ function ToDoEntryComponent(
   parent.appendChild(div);
 
   console.log("Component");
-  let p = -1;
   const subs = prop$.subscribe(v => {
-    if (p == v) {
-      return;
-    }
     text.data = `Entry X / ${v}`;
     console.log("Changed");
-    p = v;
   });
 
   return () => {
-    subs();
+    subs.unsubscribe();
     div.remove();
   };
 }
